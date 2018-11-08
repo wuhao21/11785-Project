@@ -29,7 +29,7 @@ class OpenImageDataset(Dataset):
 
 	def __init__(self, csvfile, root_dir, transform=None, test=False):
 		csv = pd.read_csv(csvfile)
-		csv = csv.loc[csv.ImageID.str.startswith('0')].head(300000)
+		csv = csv.loc[csv.ImageID.str.startswith('0')].head(50000)
 		self.img_ids = csv.ImageID
 		self.YMin = np.array(csv.YMin)
 		self.YMax = np.array(csv.YMax)
@@ -53,18 +53,32 @@ class OpenImageDataset(Dataset):
 		#print('---------------------')
 		if len(image.shape) == 1:
 			image = image[0]
-		if len(image.shape) == 2:
+		if len(image.shape) == 2 or (len(image.shape) == 3 and image.shape[2] == 1):
 			image = cv2.cvtColor(image,cv2.COLOR_GRAY2RGB)
-		h, w = image.shape[:2]
-		image = image[
-			max(0, int(self.YMin[idx]*h)-10):min(h-1, int(self.YMax[idx]*h)+10),
-			max(0, int(self.XMin[idx]*w)-10):min(w-1, int(self.XMax[idx]*w)+10)]
-		image = np.transpose(image, (2, 0, 1))
-		#print(image.shape)
-		if image.shape[0] == 4:
+		if  (len(image.shape) == 3 and image.shape[2] == 4):
 			image = cv2.cvtColor(image,cv2.COLOR_RGBA2RGB)
+
+		h0, w0 = image.shape[:2]
+		scale = 1024/max(h0, w0)
+		h, w = int(round(h0*scale)), int(round(w0*scale))
+		image = cv2.resize(image, (h, w), interpolation = cv2.INTER_AREA)
+		image = image[
+		    max(0, int(self.YMin[idx]*w)-2):min(w-1, int(self.YMax[idx]*w)+2),
+		    max(0, int(self.XMin[idx]*h)-2):min(h-1, int(self.XMax[idx]*h)+2)
+		]
+		image = np.transpose(image, (2, 0, 1))
+
+		#print(image.shape)
 		if self.transform:
-			image = self.transform(np.array(image))
+			try:
+				this_shape = image.shape
+				image = self.transform(np.array(image))
+			except ValueError:
+				print(this_shape)
+				print(img_name)
+				print(max(0, int(self.YMin[idx]*w)-1), min(w-1, int(self.YMax[idx]*w)+1), max(0, int(self.XMin[idx]*h)-1), min(h-1, int(self.XMax[idx]*h)+1))
+				print(h, w)
+				exit(0)
 			image = image[0:3]
 		#print(image.size())
 		if self.test:
