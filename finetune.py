@@ -13,11 +13,11 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 #hyper-parameter
 num_class = 597
-net = models.resnet18(pretrained=True)
+net = models.resnet152(pretrained=True)
 num_ftrs = net.fc.in_features
 net.fc = nn.Linear(num_ftrs, num_class)
 net = net.to(DEVICE)
-batch_size = 128
+batch_size = 20
 epoches = 5
 learning_rate = 1e-4
 val = 0.2
@@ -29,7 +29,7 @@ class OpenImageDataset(Dataset):
 
 	def __init__(self, csvfile, root_dir, transform=None, test=False):
 		csv = pd.read_csv(csvfile)
-		csv = csv.loc[csv.ImageID.str.startswith('0')].head(50000)
+		csv = csv.loc[csv.ImageID.str.startswith('0')].head(600000)
 		self.img_ids = csv.ImageID
 		self.YMin = np.array(csv.YMin)
 		self.YMax = np.array(csv.YMax)
